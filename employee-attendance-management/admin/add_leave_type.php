@@ -12,9 +12,10 @@ $success = false;
 if (isset($_POST['submit'])) {
     $leave_type_name = $_POST['leave_type_name'];
     $description = $_POST['description'];
+    $number_of_days = $_POST['number_of_days'];
 
-    $sql = "INSERT INTO tbl_leave_type (leave_type_name, description) 
-            VALUES ('$leave_type_name', '$description')";
+    $sql = "INSERT INTO tbl_leave_type (leave_type_name, description, number_of_days) 
+            VALUES ('$leave_type_name', '$description', '$number_of_days')";
 
     if (mysqli_query($connection, $sql)) {
         $message = "✅ Leave Type Added Successfully!";
@@ -44,6 +45,9 @@ if (isset($_POST['submit'])) {
         <label>Description:</label>
         <textarea name="description" required></textarea>
 
+        <label>Number of Days:</label>
+        <input type="number" name="number_of_days" min="1" required>
+
         <input type="submit" name="submit" value="Create Leave Type">
     </form>
 </div>
@@ -68,7 +72,6 @@ if (isset($_POST['submit'])) {
 
 <!-- Styling -->
 <style>
-
 h2 {
     text-align: center;
     color: #333;
@@ -89,7 +92,8 @@ h2 {
 }
 
 .styled-form input[type="text"],
-.styled-form textarea {
+.styled-form textarea,
+.styled-form input[type="number"] {
     width: 100%;
     padding: 10px;
     margin-bottom: 15px;

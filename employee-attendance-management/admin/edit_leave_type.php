@@ -30,9 +30,12 @@ if (isset($_GET['id'])) {
 if (isset($_POST['submit'])) {
     $leave_type_name = $_POST['leave_type_name'];
     $description = $_POST['description'];
+    $number_of_days = $_POST['number_of_days'];
 
     $update_sql = "UPDATE tbl_leave_type 
-                   SET leave_type_name = '$leave_type_name', description = '$description' 
+                   SET leave_type_name = '$leave_type_name', 
+                       description = '$description', 
+                       number_of_days = '$number_of_days' 
                    WHERE leave_type_id = $id";
 
     if (mysqli_query($connection, $update_sql)) {
@@ -58,6 +61,9 @@ if (isset($_POST['submit'])) {
         <label>Description:</label>
         <textarea name="description" required><?php echo $row['description']; ?></textarea>
 
+        <label>Number of Days:</label>
+        <input type="number" name="number_of_days" value="<?php echo $row['number_of_days']; ?>" min="1" required>
+
         <input type="submit" name="submit" value="Update Leave Type">
     </form>
 </div>
@@ -82,7 +88,6 @@ if (isset($_POST['submit'])) {
 
 <!-- Styling -->
 <style>
-
 h2 {
     text-align: center;
     color: #333;
@@ -100,7 +105,8 @@ h2 {
     font-weight: 600;
 }
 .styled-form input[type="text"],
-.styled-form textarea {
+.styled-form textarea,
+.styled-form input[type="number"] {
     width: 100%;
     padding: 10px;
     margin-bottom: 15px;

@@ -1,30 +1,26 @@
-<?php
+<?php 
 session_start();
-if(empty($_SESSION['name']) || $_SESSION['role']!=1)
+if(empty($_SESSION['name']))
 {
     header('location:index.php');
 }
 include('header.php');
 include('includes/connection.php');
-$fetch_query = mysqli_query($connection, "select max(id) as id from tbl_employee");
-$row = mysqli_fetch_row($fetch_query);
-if($row[0]==0)
-{
-    $emp_id = 1;
-}
-else
-{
-    $emp_id = $row[0] + 1;
-}
 
-if(isset($_REQUEST['add-employee']))
+$id = $_GET['id'];
+$fetch_query = mysqli_query($connection, "SELECT * FROM tbl_employee WHERE id='$id'");
+$row = mysqli_fetch_array($fetch_query);
+
+$upload_dir = 'uploads/employees/';
+$resume_dir = 'uploads/resumes/';
+
+if(isset($_REQUEST['save-emp']))
 {
     $first_name = $_REQUEST['first_name'];
     $last_name = $_REQUEST['last_name'];
     $username = $_REQUEST['username'];
     $emailid = $_REQUEST['emailid'];
     $pwd = $_REQUEST['pwd'];
-    $employee_id = $_REQUEST['employee_id'];
     $joining_date = $_REQUEST['joining_date'];
     $shift = $_REQUEST['shift'];
     $dob = $_REQUEST['dob'];
@@ -33,170 +29,117 @@ if(isset($_REQUEST['add-employee']))
     $department = $_REQUEST['department'];
     $status = $_REQUEST['status'];
 
+    $image_path = $row['image_path'];
+    $resume_path = $row['resume_path'];
 
-    $insert_query = mysqli_query($connection, "insert into tbl_employee set first_name='$first_name', last_name='$last_name', username='$username', emailid='$emailid', password='$pwd',  dob='$dob', employee_id='$employee_id', joining_date = '$joining_date', gender='$gender', phone='$phone',  shift='$shift', department='$department', status='$status'");
-
-    if($insert_query>0)
+    // Handle photo upload
+    if(isset($_FILES['photo']) && $_FILES['photo']['error'] == 0)
     {
-        $msg = "Employee created successfully";
+        $allowed_types = ['jpg', 'jpeg', 'png', 'gif'];
+        $file_name = $_FILES['photo']['name'];
+        $file_tmp = $_FILES['photo']['tmp_name'];
+        $file_ext = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
+
+        if(in_array($file_ext, $allowed_types))
+        {
+            $new_file_name = 'emp_'.$id.'_'.time().'.'.$file_ext;
+
+            if(!is_dir($upload_dir)){
+                mkdir($upload_dir, 0777, true);
+            }
+
+            $upload_path = $upload_dir . $new_file_name;
+
+            if(move_uploaded_file($file_tmp, $upload_path))
+            {
+                if($image_path != "" && file_exists($upload_dir . $image_path)){
+                    unlink($upload_dir . $image_path);
+                }
+                $image_path = $new_file_name;
+            }
+            else
+            {
+                $msg = "Failed to upload image.";
+            }
+        }
+        else
+        {
+            $msg = "Invalid image format. Only JPG, JPEG, PNG, GIF allowed.";
+        }
+    }
+
+    // Handle resume upload
+    if(isset($_FILES['resume']) && $_FILES['resume']['error'] == 0)
+    {
+        $allowed_resumes = ['pdf', 'doc', 'docx'];
+        $resume_name = $_FILES['resume']['name'];
+        $resume_tmp = $_FILES['resume']['tmp_name'];
+        $resume_ext = strtolower(pathinfo($resume_name, PATHINFO_EXTENSION));
+
+        if(in_array($resume_ext, $allowed_resumes))
+        {
+            $new_resume = 'resume_'.$id.'_'.time().'.'.$resume_ext;
+
+            if(!is_dir($resume_dir)){
+                mkdir($resume_dir, 0777, true);
+            }
+
+            $resume_path_full = $resume_dir . $new_resume;
+
+            if(move_uploaded_file($resume_tmp, $resume_path_full))
+            {
+                if($resume_path != "" && file_exists($resume_dir . $resume_path)){
+                    unlink($resume_dir . $resume_path);
+                }
+                $resume_path = $new_resume;
+            }
+            else
+            {
+                $msg = "Failed to upload resume.";
+            }
+        }
+        else
+        {
+            $msg = "Invalid resume format. Only PDF, DOC, DOCX allowed.";
+        }
+    }
+
+    $update_query = mysqli_query($connection, "UPDATE tbl_employee SET 
+        first_name='$first_name', last_name='$last_name', username='$username', emailid='$emailid', 
+        password='$pwd', dob='$dob', joining_date='$joining_date', gender='$gender', phone='$phone', 
+        shift='$shift', department='$department', status='$status', 
+        image_path='$image_path', resume_path='$resume_path' 
+        WHERE id='$id'");
+
+    if($update_query)
+    {
+        $msg = "Employee updated successfully";
+        $fetch_query = mysqli_query($connection, "SELECT * FROM tbl_employee WHERE id='$id'");
+        $row = mysqli_fetch_array($fetch_query);   
     }
     else
     {
-        $msg = "Error!";
+        $msg = "Error updating employee!";
     }
 }
 ?>
-<div class="page-wrapper">
-    <div class="content">
-        <div class="row">
-            <div class="col-sm-4">
-                <h4 class="page-title">Add Employee</h4>
-            </div>
-            <div class="col-sm-8 text-right m-b-20">
-                <a href="employees.php" class="btn btn-primary btn-rounded float-right">Back</a>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-lg-8 offset-lg-2">
-                <form method="post">
-                    <div class="row">
-                        <div class="col-sm-6">
-                            <div class="form-group">
-                                <label>First Name <span class="text-danger">*</span></label>
-                                <input class="form-control" type="text" name="first_name" required>
-                            </div>
-                        </div>
-                        <div class="col-sm-6">
-                            <div class="form-group">
-                                <label>Last Name <span class="text-danger">*</span></label>
-                                <input class="form-control" type="text" name="last_name" required> 
-                            </div>
-                        </div>
-                        <div class="col-sm-6">
-                            <div class="form-group">
-                                <label>Username <span class="text-danger">*</span></label>
-                                <input class="form-control" type="text" name="username" required>
-                            </div>
-                        </div>
-                        <div class="col-sm-6">
-                            <div class="form-group">
-                                <label>Email <span class="text-danger">*</span></label>
-                                <input class="form-control" type="email" name="emailid" required>
-                            </div>
-                        </div>
-                        <div class="col-sm-6">
-                            <div class="form-group">
-                                <label>Password</label>
-                                <input class="form-control" type="password" name="pwd" required>
-                            </div>
-                        </div>
-                        <div class="col-sm-6">
-                            <div class="form-group">
-                                <label>Employee ID <span class="text-danger">*</span></label>
-                                <input class="form-control" type="text" name="employee_id" required>
-                            </div>
-                        </div>
-                        <div class="col-sm-6">
-                            <div class="form-group">
-                                <label>Joining Date <span class="text-danger">*</span></label>
-                                <div class="cal-icon">
-                                    <input class="form-control datetimepicker" type="text" name="joining_date" required>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="col-sm-6">
-                            <div class="form-group">
-                                <label>Shift <span class="text-danger">*</span></label>
-                                <select class="select" name="shift" required>
-                                    <option value="">Select</option>
-                                    <?php
-                                     $fetch_query = mysqli_query($connection, "select start_time, end_time from tbl_shift where status=1");
-                                        while($shift = mysqli_fetch_array($fetch_query)){ 
-                                    ?>
-                                    <option value="<?php echo $shift['start_time']; ?>-<?php echo $shift['end_time']; ?>"><?php echo $shift['start_time']; ?>-<?php echo $shift['end_time']; ?></option>
-                                    <?php } ?>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-sm-6">
-                            <div class="form-group">
-                                <label>Date of Birth <span class="text-danger">*</span></label>
-                                <div class="cal-icon">
-                                    <input class="form-control datetimepicker" type="text" name="dob" required>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-sm-6">
-                            <div class="form-group">
-                                <label>Phone </label>
-                                <input class="form-control" type="text" name="phone" required>
-                            </div>
-                        </div>
-                        <div class="col-sm-6">
-                            <div class="form-group gender-select">
-                                <label class="gen-label">Gender:</label>
-                                <div class="form-check-inline">
-                                    <label class="form-check-label">
-                                        <input type="radio" name="gender" class="form-check-input" value="Male" >Male
-                                    </label>
-                                </div>
-                                <div class="form-check-inline">
-                                    <label class="form-check-label">
-                                        <input type="radio" name="gender" class="form-check-input" value="Female">Female
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                       
-                        <div class="col-sm-6">
-                            <div class="form-group">
-                                <label>Department</label>
-                                <select class="select" name="department" required>
-                                    <option value="">Select</option>
-                                    <?php
-                                     $fetch_query = mysqli_query($connection, "select department_name from tbl_department where status=1");
-                                        while($dept = mysqli_fetch_array($fetch_query)){ 
-                                    ?>
-                                    <option value="<?php echo $dept['department_name']; ?>"><?php echo $dept['department_name']; ?> </option>
-                                    <?php } ?>
-                                </select>
-                            </div>
-                        </div>
-                    <div class="col-sm-6">
-                    <div class="form-group">
-                        <label class="display-block">Status</label>
-                        <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="radio" name="status" id="employee_active" value="1" checked>
-                            <label class="form-check-label" for="employee_active">
-                            Active
-                            </label>
-                        </div>
-                        <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="radio" name="status" id="employee_inactive" value="0">
-                            <label class="form-check-label" for="employee_inactive">
-                            Inactive
-                            </label>
-                        </div>
-                    </div>
-                </div>
-            </div>
-                    <div class="m-t-20 text-center">
-                        <button class="btn btn-primary submit-btn" name="add-employee">Add Employee</button>
-                    </div>
-                </form>
-            </div>
-        </div>
+
+<!-- FORM HTML INSIDE .page-wrapper -->
+
+<div class="col-sm-6">
+    <div class="form-group">
+        <label>Resume</label><br>
+        <?php 
+        if(!empty($row['resume_path']) && file_exists($resume_dir . $row['resume_path'])): ?>
+            <a href="<?php echo $resume_dir . $row['resume_path']; ?>" target="_blank">Download Current Resume</a><br>
+        <?php else: ?>
+            <p>No resume uploaded.</p>
+        <?php endif; ?>
+        <input type="file" name="resume" accept=".pdf,.doc,.docx" class="form-control">
     </div>
 </div>
 
-<?php
-    include('footer.php');
-?>
+<?php include('footer.php'); ?>
 <script type="text/javascript">
- <?php
-    if(isset($msg)) {
-        echo 'swal("' . $msg . '");';
-    }
-?>
+<?php if(isset($msg)) echo 'swal("' . $msg . '");'; ?>
 </script>

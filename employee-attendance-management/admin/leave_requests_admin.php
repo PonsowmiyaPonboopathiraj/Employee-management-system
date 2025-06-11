@@ -58,6 +58,29 @@ if ($filter === 'today') {
             ORDER BY lr.leave_id DESC";
     $result = mysqli_query($connection, $sql);
 }
+
+// Function to calculate duration excluding Sundays
+function calculateDurationExcludeSundays($fromDateStr, $toDateStr) {
+    $fromDate = new DateTime($fromDateStr);
+    $toDate = new DateTime($toDateStr);
+    $interval = new DateInterval('P1D');
+    $period = new DatePeriod($fromDate, $interval, $toDate->add($interval)); // include end date
+    
+    $daysCount = 0;
+    foreach ($period as $date) {
+        // Skip Sundays (0 = Sunday)
+        if ($date->format('w') != 0) {
+            $daysCount++;
+        }
+    }
+    return $daysCount;
+}
+
+// Function to get day name from date string
+function getDayName($dateStr) {
+    $date = new DateTime($dateStr);
+    return $date->format('l'); // Full day name, e.g. Monday
+}
 ?>
 
 <!DOCTYPE html>
@@ -66,9 +89,9 @@ if ($filter === 'today') {
     <meta charset="UTF-8">
     <title>Leave Requests - Admin</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    
+
     <style>
         body { background-color: #f8f9fa; }
 
@@ -86,7 +109,6 @@ if ($filter === 'today') {
             text-align: center;
         }
 
-        /* Search and print container - flex row */
         .search-print-container {
             margin-top: 20px;
             display: flex;
@@ -212,7 +234,7 @@ if ($filter === 'today') {
                     <th>Leave Type</th>
                     <th>From</th>
                     <th>To</th>
-                    <th>Duration (Days)</th>  <!-- New column added -->
+                    <th>Duration (Days)</th>
                     <th>Reason</th>
                     <th>Status</th>
                     <th>Update</th>
@@ -221,19 +243,22 @@ if ($filter === 'today') {
                 </thead>
                 <tbody id="leaveTableBody">
                 <?php if ($result && mysqli_num_rows($result) > 0): ?>
-                    <?php while ($row = mysqli_fetch_assoc($result)): 
-                        // Calculate duration in days, including both from and to days
-                        $fromDate = new DateTime($row['from_date']);
-                        $toDate = new DateTime($row['to_date']);
-                        $duration = $toDate->diff($fromDate)->days + 1;
+                    <?php while ($row = mysqli_fetch_assoc($result)):
+
+                        // Calculate duration excluding Sundays
+                        $duration = calculateDurationExcludeSundays($row['from_date'], $row['to_date']);
+
+                        // Get day names for from and to dates
+                        $fromDayName = getDayName($row['from_date']);
+                        $toDayName = getDayName($row['to_date']);
                     ?>
                         <tr>
                             <td><?= $row['leave_id']; ?></td>
                             <td><?= htmlspecialchars($row['employee_name']); ?></td>
                             <td><?= htmlspecialchars($row['leave_type_name']); ?></td>
-                            <td><?= htmlspecialchars($row['from_date']); ?></td>
-                            <td><?= htmlspecialchars($row['to_date']); ?></td>
-                            <td><?= $duration; ?></td>  <!-- Duration column -->
+                            <td><?= htmlspecialchars($row['from_date']) . " <br><small>(" . $fromDayName . ")</small>"; ?></td>
+                            <td><?= htmlspecialchars($row['to_date']) . " <br><small>(" . $toDayName . ")</small>"; ?></td>
+                            <td><?= $duration; ?></td>
                             <td><?= htmlspecialchars($row['reason']); ?></td>
                             <td style="font-weight:bold; color:
                                 <?php

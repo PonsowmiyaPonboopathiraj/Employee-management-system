@@ -3,29 +3,38 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-
 include('header.php');
 include('includes/connection.php');
 
 $employee_id = $_SESSION['employee_id'];
+$startDate = '';
+$endDate = '';
+$recordCount = 0;
 
-// Default query
-$query = "SELECT * FROM tbl_attendance WHERE employee_id = '$employee_id'";
+// Base query
+$query = "
+SELECT * FROM (
+    SELECT * FROM tbl_attendance 
+    WHERE employee_id = '$employee_id'
+    ORDER BY id DESC
+) AS sub
+";
 
-// Filter by date range
+// Apply date filter if available
 if (isset($_POST['search'])) {
     $startDate = $_POST['start_date'];
     $endDate = $_POST['end_date'];
 
     if (!empty($startDate) && !empty($endDate)) {
-        $query .= " AND date BETWEEN '$startDate' AND '$endDate'";
+        $query .= " WHERE date BETWEEN '$startDate' AND '$endDate'";
     }
 }
 
-// Sort by latest date
-$query .= " ORDER BY date DESC";
+// Finally, group to avoid duplicates and order
+$query .= " GROUP BY date ORDER BY date DESC";
 
 $result = mysqli_query($connection, $query);
+$recordCount = mysqli_num_rows($result);
 ?>
 
 <div class="page-wrapper">
@@ -36,14 +45,18 @@ $result = mysqli_query($connection, $query);
         <form method="POST" class="row mb-4">
             <div class="col-md-3">
                 <label>From Date</label>
-                <input type="date" name="start_date" class="form-control" required>
+                <input type="date" name="start_date" class="form-control" value="<?= htmlspecialchars($startDate) ?>">
             </div>
             <div class="col-md-3">
                 <label>To Date</label>
-                <input type="date" name="end_date" class="form-control" required>
+                <input type="date" name="end_date" class="form-control" value="<?= htmlspecialchars($endDate) ?>">
+            </div>
+            <div class="col-md-3 align-self-end d-flex gap-2">
+                <button type="submit" name="search" class="btn btn-primary">Search</button>
+                <a href="<?= $_SERVER['PHP_SELF'] ?>" class="btn btn-secondary">Reset</a>
             </div>
             <div class="col-md-3 align-self-end">
-                <button type="submit" name="search" class="btn btn-primary">Search</button>
+                <input type="text" class="form-control" value="Attendance count: <?= $recordCount ?>" readonly>
             </div>
         </form>
 
@@ -63,7 +76,7 @@ $result = mysqli_query($connection, $query);
                     </tr>
                 </thead>
                 <tbody>
-                    <?php if (mysqli_num_rows($result) > 0): ?>
+                    <?php if ($recordCount > 0): ?>
                         <?php while ($row = mysqli_fetch_assoc($result)): ?>
                             <tr>
                                 <td><?= htmlspecialchars($row['date']) ?></td>
@@ -86,3 +99,5 @@ $result = mysqli_query($connection, $query);
         </div>
     </div>
 </div>
+
+<?php include('footer.php'); ?>

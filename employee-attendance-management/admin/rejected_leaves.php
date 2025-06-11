@@ -11,33 +11,20 @@ $sql = "SELECT lr.*, e.username AS employee_name, lt.leave_type_name
         WHERE lr.status = 'Rejected'
         ORDER BY lr.leave_id DESC";
 $result = mysqli_query($connection, $sql);
-$pending = mysqli_num_rows($result);
-
 ?>
-
+<div class="page-wrapper">
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    
-        <div class="page-wrapper">
     <meta charset="UTF-8" />
     <title>Rejected Leaves</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-
-    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
 
     <style>
-        body {
-            background-color: #f8f9fa;
-        }
-          .sidebar a {
-    text-decoration: none !important;
-}
-
-.sidebar a:hover {
-    text-decoration: none !important;
-}
+        body { background-color: #f8f9fa; }
+        .sidebar a { text-decoration: none !important; }
+        .sidebar a:hover { text-decoration: none !important; }
 
         .page-header {
             margin: 30px 0 20px;
@@ -55,15 +42,8 @@ $pending = mysqli_num_rows($result);
             flex-wrap: nowrap;
         }
 
-        .search-box {
-            width: 280px;
-            min-width: 200px;
-        }
-
-        .print-btn {
-            white-space: nowrap;
-            flex-shrink: 0;
-        }
+        .search-box { width: 280px; min-width: 200px; }
+        .print-btn { white-space: nowrap; flex-shrink: 0; }
 
         .table-container {
             background-color: #fff;
@@ -74,54 +54,21 @@ $pending = mysqli_num_rows($result);
             overflow-x: auto;
         }
 
-        table {
-            min-width: 700px;
-            font-size: 1rem;
-        }
+        table { min-width: 800px; font-size: 1rem; }
+        th, td { vertical-align: middle !important; }
+        th:first-child, td:first-child { width: 60px; text-align: center; }
 
-        th, td {
-            vertical-align: middle !important;
-        }
-
-        th:first-child, td:first-child {
-            width: 60px;
-            text-align: center;
-        }
-
-        /* Color for Rejected status */
-        .status-rejected {
-            color: red;
-            font-weight: bold;
-        }
+        .status-rejected { color: red; font-weight: bold; }
 
         @media print {
-            .search-box,
-            .print-btn,
-            .navbar,
-            .sidebar,
-            .page-header {
-                display: none !important;
-            }
-            body {
-                margin: 0;
-                padding: 0;
-                background: #fff;
-            }
-            table {
-                width: 100% !important;
-                font-size: 14px;
-            }
+            .search-box, .print-btn, .navbar, .sidebar, .page-header { display: none !important; }
+            body { margin: 0; padding: 0; background: #fff; }
+            table { width: 100% !important; font-size: 14px; }
         }
 
         @media (max-width: 400px) {
-            .search-print-container {
-                flex-wrap: wrap;
-                gap: 8px;
-            }
-            .search-box, .print-btn {
-                width: 100%;
-            }
-            
+            .search-print-container { flex-wrap: wrap; gap: 8px; }
+            .search-box, .print-btn { width: 100%; }
         }
     </style>
 
@@ -164,20 +111,47 @@ $pending = mysqli_num_rows($result);
                     <th>Leave Type</th>
                     <th>From</th>
                     <th>To</th>
+                    <th>Duration (Days)</th>
+                    <th>Day</th>
                     <th>Reason</th>
                     <th>Status</th>
                 </tr>
             </thead>
             <tbody id="leaveTableBody">
                 <?php
+                function calculateDaysExcludingSundays($from, $to) {
+                    $start = new DateTime($from);
+                    $end = new DateTime($to);
+                    $end->modify('+1 day');
+                    $interval = new DateInterval('P1D');
+                    $period = new DatePeriod($start, $interval, $end);
+                    $count = 0;
+                    foreach ($period as $dt) {
+                        if ($dt->format('w') != 0) {
+                            $count++;
+                        }
+                    }
+                    return $count;
+                }
+
                 $sn = 1;
                 while ($row = mysqli_fetch_assoc($result)) {
+                    $from = $row['from_date'];
+                    $to = $row['to_date'];
+                    $duration = calculateDaysExcludingSundays($from, $to);
+
+                    $fromDay = date('l', strtotime($from));
+                    $toDay = date('l', strtotime($to));
+                    $dayText = "$fromDay to $toDay";
+
                     echo "<tr>";
                     echo "<td>{$sn}</td>";
                     echo "<td>" . htmlspecialchars($row['employee_name']) . "</td>";
                     echo "<td>" . htmlspecialchars($row['leave_type_name']) . "</td>";
-                    echo "<td>" . htmlspecialchars($row['from_date']) . "</td>";
-                    echo "<td>" . htmlspecialchars($row['to_date']) . "</td>";
+                    echo "<td>" . htmlspecialchars($from) . "</td>";
+                    echo "<td>" . htmlspecialchars($to) . "</td>";
+                    echo "<td>{$duration}</td>";
+                    echo "<td>{$dayText}</td>";
                     echo "<td>" . htmlspecialchars($row['reason']) . "</td>";
                     echo "<td class='status-rejected'>" . htmlspecialchars($row['status']) . "</td>";
                     echo "</tr>";
